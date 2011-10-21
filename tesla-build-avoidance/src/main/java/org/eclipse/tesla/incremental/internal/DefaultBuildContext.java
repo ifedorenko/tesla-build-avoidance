@@ -13,7 +13,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,9 +33,9 @@ class DefaultBuildContext
 
     private final DefaultBuildContextManager manager;
 
-    final WeakReference<BuildContext> reference;
-
     private boolean closed = false;
+
+    private boolean committed = false;
 
     private final Logger log;
 
@@ -80,8 +79,6 @@ class DefaultBuildContext
             throw new IllegalArgumentException( "build state not specified" );
         }
 
-        reference = new WeakReference<BuildContext>( this );
-
         start = System.currentTimeMillis();
 
         this.log = manager.log;
@@ -101,7 +98,7 @@ class DefaultBuildContext
 
     public Digester newDigester()
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         return manager.newDigester( outputDirectory );
     }
@@ -113,7 +110,7 @@ class DefaultBuildContext
 
     public Serializable getValue( Serializable key )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         return buildState.getValue( key );
     }
@@ -139,14 +136,14 @@ class DefaultBuildContext
 
     public void setValue( Serializable key, Serializable value )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         buildState.setValue( key, value );
     }
 
     public boolean setConfiguration( byte[] digest )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         this.configuration = digest;
 
@@ -155,7 +152,7 @@ class DefaultBuildContext
 
     public synchronized Collection<String> getInputs( PathSet paths )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         if ( paths == null )
         {
@@ -195,7 +192,7 @@ class DefaultBuildContext
     public OutputStream newOutputStream( File output )
         throws FileNotFoundException
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         output = FileUtils.resolve( output, null );
 
@@ -204,7 +201,7 @@ class DefaultBuildContext
 
     public void addOutput( File input, File output )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         if ( output != null )
         {
@@ -214,7 +211,7 @@ class DefaultBuildContext
 
     public void addOutputs( File input, File... outputs )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         if ( outputs != null && outputs.length > 0 )
         {
@@ -224,14 +221,14 @@ class DefaultBuildContext
 
     public void addOutputs( File input, Collection<File> outputs )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         addOutputs( outputs, input );
     }
 
     public void addOutputs( File input, PathSet outputs )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         if ( outputs != null )
         {
@@ -287,14 +284,7 @@ class DefaultBuildContext
 
     public synchronized void close()
     {
-        if ( reference.get() == null )
-        {
-            return;
-        }
-
-        reference.clear();
-
-        if ( !closed )
+        if ( !committed )
         {
             manager.destroy( buildState );
         }
@@ -304,17 +294,17 @@ class DefaultBuildContext
 
     public synchronized void commit()
     {
-        if ( reference.get() == null )
+        if ( closed )
         {
             throw new IllegalStateException( "commit() after close()" );
         }
 
-        if ( closed )
+        if ( committed )
         {
             return;
         }
 
-        closed = true;
+        committed = true;
 
         modifiedOutputs.removeAll( unmodifiedOutputs );
         int produced = modifiedOutputs.size();
@@ -428,7 +418,7 @@ class DefaultBuildContext
 
     public void addMessage( File input, int line, int column, String message, int severity, Throwable cause )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         input = FileUtils.resolve( input, null );
 
@@ -446,7 +436,7 @@ class DefaultBuildContext
 
     public void clearMessages( File input )
     {
-        failIfClosed();
+        failIfCommittedOrClosed();
 
         input = FileUtils.resolve( input, null );
 
@@ -457,8 +447,12 @@ class DefaultBuildContext
         manager.clearMessages( input );
     }
 
-    private void failIfClosed()
+    private void failIfCommittedOrClosed()
     {
+        if ( committed )
+        {
+            throw new IllegalStateException( "build context has already been committed" );
+        }
         if ( closed )
         {
             throw new IllegalStateException( "build context has already been closed" );

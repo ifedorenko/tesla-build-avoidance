@@ -9,19 +9,14 @@ package org.eclipse.tesla.incremental.internal;
  *******************************************************************************/
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -41,20 +36,6 @@ public class DefaultBuildContextManager
     protected Logger log;
 
     final Map<File, WeakReference<BuildState>> buildStates;
-
-    private final InheritableThreadLocal<SortedMap<File, WeakReference<BuildContext>>> buildContexts =
-        new InheritableThreadLocal<SortedMap<File, WeakReference<BuildContext>>>()
-        {
-            protected SortedMap<File, WeakReference<BuildContext>> initialValue()
-            {
-                return new TreeMap<File, WeakReference<BuildContext>>( Collections.reverseOrder() );
-            }
-
-            protected SortedMap<File, WeakReference<BuildContext>> childValue( SortedMap<File, WeakReference<BuildContext>> parentValue )
-            {
-                return new TreeMap<File, WeakReference<BuildContext>>( parentValue );
-            }
-        };
 
     public DefaultBuildContextManager()
     {
@@ -152,7 +133,6 @@ public class DefaultBuildContextManager
         BuildState buildState = getBuildState( outputDirectory, stateDirectory, builderId, fullBuild );
 
         DefaultBuildContext context = new DefaultBuildContext( this, outputDirectory, buildState, fullBuild );
-        buildContexts.get().put( outputDirectory, context.reference );
 
         return context;
     }
@@ -310,139 +290,6 @@ public class DefaultBuildContextManager
         scan.run();
 
         return selectedFiles;
-    }
-
-    public void addOutput( File input, File output )
-    {
-        if ( output != null )
-        {
-            output = FileUtils.resolve( output, null );
-
-            BuildContext buildContext = getBuildContext( output );
-            if ( buildContext != null )
-            {
-                buildContext.addOutput( input, output );
-            }
-            else
-            {
-                outputUpdated( Collections.singleton( output ) );
-            }
-        }
-    }
-
-    public void addOutputs( File input, File... outputs )
-    {
-        if ( outputs != null && outputs.length > 0 )
-        {
-            Collection<File> updateOutputs = new HashSet<File>( outputs.length );
-
-            for ( File output : outputs )
-            {
-                if ( output != null )
-                {
-                    output = FileUtils.resolve( output, null );
-
-                    BuildContext buildContext = getBuildContext( output );
-                    if ( buildContext != null )
-                    {
-                        buildContext.addOutput( input, output );
-                    }
-                    else
-                    {
-                        updateOutputs.add( output );
-                    }
-                }
-            }
-
-            if ( !updateOutputs.isEmpty() )
-            {
-                outputUpdated( updateOutputs );
-            }
-        }
-    }
-
-    public void addOutputs( File input, Collection<File> outputs )
-    {
-        if ( outputs != null && !outputs.isEmpty() )
-        {
-            Collection<File> updateOutputs = new HashSet<File>( outputs.size() );
-
-            for ( File output : outputs )
-            {
-                if ( output != null )
-                {
-                    output = FileUtils.resolve( output, null );
-
-                    BuildContext buildContext = getBuildContext( output );
-                    if ( buildContext != null )
-                    {
-                        buildContext.addOutput( input, output );
-                    }
-                    else
-                    {
-                        updateOutputs.add( output );
-                    }
-                }
-            }
-
-            if ( !updateOutputs.isEmpty() )
-            {
-                outputUpdated( updateOutputs );
-            }
-        }
-    }
-
-    public void addOutputs( File input, PathSet outputs )
-    {
-        if ( outputs != null )
-        {
-            BuildContext buildContext = getBuildContext( outputs.getBasedir() );
-            if ( buildContext != null )
-            {
-                buildContext.addOutputs( input, outputs );
-            }
-            else
-            {
-                Collection<File> updateOutputs = resolveOutputs( outputs );
-
-                if ( !updateOutputs.isEmpty() )
-                {
-                    outputUpdated( updateOutputs );
-                }
-            }
-        }
-    }
-
-    public OutputStream newOutputStream( File output )
-        throws FileNotFoundException
-    {
-        output = FileUtils.resolve( output, null );
-
-        BuildContext buildContext = getBuildContext( output );
-        if ( buildContext != null )
-        {
-            return buildContext.newOutputStream( output );
-        }
-
-        return new IncrementalFileOutputStream( output, null );
-    }
-
-    protected BuildContext getBuildContext( File output )
-    {
-        for ( Iterator<Map.Entry<File, WeakReference<BuildContext>>> it = buildContexts.get().entrySet().iterator(); it.hasNext(); )
-        {
-            Map.Entry<File, WeakReference<BuildContext>> entry = it.next();
-            BuildContext context = entry.getValue().get();
-            if ( context == null )
-            {
-                it.remove();
-            }
-            else if ( FileUtils.relativize( output, context.getOutputDirectory() ) != null )
-            {
-                return context;
-            }
-        }
-        return null;
     }
 
 }
