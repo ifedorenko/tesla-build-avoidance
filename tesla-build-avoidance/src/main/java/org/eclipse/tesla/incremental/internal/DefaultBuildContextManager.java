@@ -26,6 +26,8 @@ import org.eclipse.tesla.incremental.BuildContext;
 import org.eclipse.tesla.incremental.BuildContextManager;
 import org.eclipse.tesla.incremental.Digester;
 import org.eclipse.tesla.incremental.PathSet;
+import org.slf4j.Logger;
+import org.slf4j.helpers.NOPLogger;
 
 @Named
 @Singleton
@@ -45,7 +47,7 @@ public class DefaultBuildContextManager
     @Inject
     public DefaultBuildContextManager( Logger log )
     {
-        this.log = ( log != null ) ? log : NullLogger.INSTANCE;
+        this.log = ( log != null ) ? log : NOPLogger.NOP_LOGGER;
         buildStates = new HashMap<File, WeakReference<BuildState>>();
     }
 

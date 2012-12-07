@@ -26,6 +26,7 @@ import org.eclipse.tesla.incremental.BuildContext;
 import org.eclipse.tesla.incremental.BuildException;
 import org.eclipse.tesla.incremental.Digester;
 import org.eclipse.tesla.incremental.PathSet;
+import org.slf4j.Logger;
 
 class DefaultBuildContext
     implements BuildContext
