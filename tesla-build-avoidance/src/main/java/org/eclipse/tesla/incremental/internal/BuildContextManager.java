@@ -1,4 +1,4 @@
-package org.eclipse.tesla.incremental;
+package org.eclipse.tesla.incremental.internal;
 
 /*******************************************************************************
  * Copyright (c) 2011 Sonatype, Inc.
@@ -9,6 +9,8 @@ package org.eclipse.tesla.incremental;
  *******************************************************************************/
 
 import java.io.File;
+
+import org.eclipse.tesla.incremental.BuildContext;
 
 /**
  * Provides incremental build support for code generators and similar tooling that produces output from some input

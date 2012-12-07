@@ -23,8 +23,6 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import org.eclipse.tesla.incremental.BuildContext;
-import org.eclipse.tesla.incremental.BuildException;
-import org.eclipse.tesla.incremental.Digester;
 import org.eclipse.tesla.incremental.PathSet;
 import org.slf4j.Logger;
 
@@ -97,6 +95,13 @@ class DefaultBuildContext
         this.messages = new HashMap<File, Collection<Message>>();
     }
 
+    /**
+     * Creates a new digester to create a fingerprint of the current component/plugin configuration. The configuration
+     * fingerprint is used to detect a change in plugin configuration since the last build, allowing the plugin to do a
+     * full rebuild rather an incremental build.
+     * 
+     * @return The configuration digester, never {@code null}.
+     */
     public Digester newDigester()
     {
         failIfCommittedOrClosed();
@@ -104,6 +109,11 @@ class DefaultBuildContext
         return manager.newDigester( outputDirectory );
     }
 
+    /**
+     * Gets the output directory managed by this context.
+     * 
+     * @return The output directory being managed, never {@code null}.
+     */
     public File getOutputDirectory()
     {
         return outputDirectory;
@@ -142,6 +152,17 @@ class DefaultBuildContext
         buildState.setValue( key, value );
     }
 
+    /**
+     * Records the fingerprint of the current configuration and checks whether the configuration has changed since the
+     * last build. Such a change in configuration usually means all input files need to be rebuild, regardless whether
+     * the files themselves are modified.
+     * 
+     * @param digest The fingerprint of the configuration, must not be {@code null}.
+     * @return {@code true} if the configuration has changed since the last build and a full rebuild should be done,
+     *         {@code false} if an incremental build is sufficient.
+     * @see #newDigester()
+     * @see #getInputs(PathSet)
+     */
     public boolean setConfiguration( byte[] digest )
     {
         failIfCommittedOrClosed();
@@ -283,6 +304,14 @@ class DefaultBuildContext
         }
     }
 
+    /**
+     * Releases resources associated with this build context.
+     * <p/>
+     * If this method is invoked for a build context that has not been finished yet, incremental build state from
+     * previous build is discarded and full build will be performed during next execution.
+     * 
+     * @see #commit()
+     */
     public synchronized void close()
     {
         if ( !committed )
@@ -293,6 +322,16 @@ class DefaultBuildContext
         closed = true;
     }
 
+    /**
+     * Finishes changes associated with this build context. Among others, this deletes any orphaned output files of
+     * previous builds, persists the incremental build state back to disk and releases any resources associated with the
+     * context. Once a build context has been finished, it must not be used for further operations. Finishing any
+     * already finished build context has no effect.
+     * 
+     * @throws BuildException If the build added any error message or if any error message from previous builds were not
+     *             cleared.
+     * @see #addMessage(File, int, int, String, int, Throwable)
+     */
     public synchronized void commit()
     {
         if ( closed )

@@ -23,8 +23,6 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.eclipse.tesla.incremental.BuildContext;
-import org.eclipse.tesla.incremental.BuildContextManager;
-import org.eclipse.tesla.incremental.Digester;
 import org.eclipse.tesla.incremental.PathSet;
 import org.slf4j.Logger;
 import org.slf4j.helpers.NOPLogger;
@@ -113,7 +111,7 @@ public class DefaultBuildContextManager
         // defaults to noop
     }
 
-    public BuildContext newContext( File outputDirectory, File stateDirectory, String builderId )
+    public DefaultBuildContext newContext( File outputDirectory, File stateDirectory, String builderId )
     {
         if ( outputDirectory == null )
         {

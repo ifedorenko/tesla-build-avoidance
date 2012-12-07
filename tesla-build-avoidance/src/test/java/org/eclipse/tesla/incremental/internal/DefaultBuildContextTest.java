@@ -8,7 +8,11 @@ package org.eclipse.tesla.incremental.internal;
  *   http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,9 +27,6 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
-import org.eclipse.tesla.incremental.BuildContext;
-import org.eclipse.tesla.incremental.BuildContextManager;
-import org.eclipse.tesla.incremental.BuildException;
 import org.eclipse.tesla.incremental.PathSet;
 import org.eclipse.tesla.incremental.test.SpyBuildContextManager;
 import org.junit.After;
@@ -45,7 +46,7 @@ public class DefaultBuildContextTest
     public TestName testName = new TestName();
 
     @Inject
-    private BuildContextManager manager;
+    private DefaultBuildContextManager manager;
 
     private File stateDirectory;
 
@@ -83,14 +84,15 @@ public class DefaultBuildContextTest
         super.configure( binder );
 
         binder.bind( BuildContextManager.class ).to( SpyBuildContextManager.class );
+        binder.bind( DefaultBuildContextManager.class ).to( SpyBuildContextManager.class );
     }
 
-    private BuildContext newContext()
+    private DefaultBuildContext newContext()
     {
         return newContext( outputDirectory, "test-plugin:1.0" );
     }
 
-    private BuildContext newContext( File outputDirectory, String builderId )
+    private DefaultBuildContext newContext( File outputDirectory, String builderId )
     {
         return manager.newContext( outputDirectory, stateDirectory, builderId );
     }
@@ -104,7 +106,7 @@ public class DefaultBuildContextTest
     public void testGetOutputDirectory()
     {
         File outputDirectory = new File( "target/tests/output" + System.nanoTime() ).getAbsoluteFile();
-        BuildContext ctx = newContext( outputDirectory, "plugin-id" );
+        DefaultBuildContext ctx = newContext( outputDirectory, "plugin-id" );
         assertEquals( outputDirectory, ctx.getOutputDirectory() );
     }
 
@@ -112,7 +114,7 @@ public class DefaultBuildContextTest
     public void testLoad_ToleratesCorruptStateFiles()
         throws Exception
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             assertEquals( true, ctx.setConfiguration( new byte[] { 1 } ) );
@@ -159,7 +161,7 @@ public class DefaultBuildContextTest
     @Test
     public void testSetConfiguration_SignalsChangeOfConfiguration()
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             assertEquals( true, ctx.setConfiguration( new byte[] { 1 } ) );
@@ -207,7 +209,7 @@ public class DefaultBuildContextTest
     @Test
     public void testSetConfiguration_ConsidersPluginId()
     {
-        BuildContext ctx = newContext( outputDirectory, "test-plugin:1" );
+        DefaultBuildContext ctx = newContext( outputDirectory, "test-plugin:1" );
         try
         {
             assertEquals( true, ctx.setConfiguration( new byte[] { 1 } ) );
@@ -237,7 +239,7 @@ public class DefaultBuildContextTest
         String name = "target/tests/dir/subdir/file" + System.currentTimeMillis();
         byte[] data = name.getBytes( "UTF-8" );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             OutputStream os = ctx.newOutputStream( new File( name ) );
@@ -282,7 +284,7 @@ public class DefaultBuildContextTest
     public void testNewOutputStream_DoesNotModifyOutputFileUnlessContentActuallyChanged()
         throws Exception
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             File output = new File( outputDirectory, "test.txt" );
@@ -344,7 +346,7 @@ public class DefaultBuildContextTest
         File output = new File( outputDirectory, "test.txt" );
 
         // prime output file contents
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             OutputStream os = ctx.newOutputStream( output );
@@ -401,7 +403,7 @@ public class DefaultBuildContextTest
     {
         File output = new File( outputDirectory, "test.txt" );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             assertFalse( output.exists() );
@@ -431,7 +433,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -483,7 +485,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory ).setKind( PathSet.Kind.FILES_AND_DIRECTORIES );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -535,7 +537,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -577,7 +579,7 @@ public class DefaultBuildContextTest
         File output2 = new File( outputDirectory, "output$inner.class" );
         File output3 = new File( outputDirectory, "new.class" );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             output1.createNewFile();
@@ -636,7 +638,7 @@ public class DefaultBuildContextTest
         File output1 = new File( outputDirectory, "output1.class" );
         File output2 = new File( outputDirectory, "output2.class" );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             output1.createNewFile();
@@ -674,7 +676,7 @@ public class DefaultBuildContextTest
     @Test
     public void testFinish_FinishAgainIsHarmless()
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         ctx.commit();
         ctx.commit();
         ctx.close();
@@ -684,7 +686,7 @@ public class DefaultBuildContextTest
     @Test( expected = IllegalStateException.class )
     public void testFinish_CommitAfterCloseIsInvalid()
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         ctx.commit();
         ctx.close();
         ctx.commit();
@@ -693,7 +695,7 @@ public class DefaultBuildContextTest
     @Test( expected = IllegalStateException.class )
     public void testAddOutput_AfterFinishIsInvalid()
     {
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         ctx.commit();
         ctx.addOutput( inputDirectory, outputDirectory );
     }
@@ -707,7 +709,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory ).setKind( PathSet.Kind.FILES_AND_DIRECTORIES );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -744,7 +746,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory ).setKind( PathSet.Kind.FILES_AND_DIRECTORIES );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             ctx.setConfiguration( new byte[] { 1 } );
@@ -786,7 +788,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -827,7 +829,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -871,7 +873,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -937,7 +939,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = PathSet.fromFile( input );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -981,7 +983,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = PathSet.fromFile( input );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
@@ -1022,13 +1024,13 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
             try
             {
                 ctx.commit();
@@ -1054,13 +1056,13 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
             try
             {
                 ctx.commit();
@@ -1109,7 +1111,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = PathSet.fromFile( input );
 
-        BuildContext ctx;
+        DefaultBuildContext ctx;
 
         // initial build
         ctx = newContext();
@@ -1117,7 +1119,7 @@ public class DefaultBuildContextTest
         assertSetEquals( inputs, "input.g" );
         ctx.addReferencedInputs( input, Arrays.asList( referenced ) );
         ctx.clearMessages( referenced );
-        ctx.addMessage( referenced, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+        ctx.addMessage( referenced, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
         try
         {
             ctx.commit();
@@ -1157,13 +1159,13 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
             try
             {
                 ctx.commit();
@@ -1223,13 +1225,13 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_WARNING, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_WARNING, null );
             ctx.commit();
         }
         finally
@@ -1247,13 +1249,13 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
             try
             {
                 ctx.commit();
@@ -1294,14 +1296,14 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );
             assertSetEquals( inputs, "input1.java" );
             ctx.clearMessages( input );
-            ctx.addMessage( input, 1, 0, "test-1", BuildContext.SEVERITY_ERROR, null );
-            ctx.addMessage( input, 2, 0, "test-2", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 1, 0, "test-1", DefaultBuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 2, 0, "test-2", DefaultBuildContext.SEVERITY_ERROR, null );
             try
             {
                 ctx.commit();
@@ -1332,14 +1334,14 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
 
         Collection<String> inputs = ctx.getInputs( paths );
         assertSetEquals( inputs, "input1.java" );
 
         try
         {
-            ctx.addMessage( input, 0, 0, "test", BuildContext.SEVERITY_ERROR, null );
+            ctx.addMessage( input, 0, 0, "test", DefaultBuildContext.SEVERITY_ERROR, null );
             fail( "addMessage without prio clearMessage did not raise exception" );
         }
         catch ( IllegalStateException e )
@@ -1357,7 +1359,7 @@ public class DefaultBuildContextTest
 
         PathSet paths = new PathSet( inputDirectory ).setKind( PathSet.Kind.FILES_ONLY );
 
-        BuildContext ctx = newContext();
+        DefaultBuildContext ctx = newContext();
         try
         {
             Collection<String> inputs = ctx.getInputs( paths );

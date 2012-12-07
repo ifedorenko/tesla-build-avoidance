@@ -8,7 +8,8 @@ package org.eclipse.tesla.incremental.internal;
  *   http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -16,7 +17,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import org.eclipse.tesla.incremental.BuildContext;
 import org.eclipse.tesla.incremental.PathSet;
 import org.junit.After;
 import org.junit.Before;
@@ -79,7 +79,7 @@ public class DefaultBuildContextManagerTest
             }
         };
 
-        BuildContext ctx = manager.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
+        DefaultBuildContext ctx = manager.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
         try
         {
             ctx.getInputs( new PathSet( inputDirectory ) );
@@ -98,13 +98,13 @@ public class DefaultBuildContextManagerTest
     {
         DefaultBuildContextManager manager = new DefaultBuildContextManager();
 
-        BuildContext ctx = manager.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
+        DefaultBuildContext ctx = manager.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
         ctx.setConfiguration( new byte[] { 0 } );
         ctx.commit();
         ctx.close();
 
         DefaultBuildContextManager manager2 = new DefaultBuildContextManager();
-        BuildContext ctx2 = manager2.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
+        DefaultBuildContext ctx2 = manager2.newContext( outputDirectory, stateDirectory, "test-plugin:0.1" );
         ctx2.setConfiguration( new byte[] { 1, 2 } );
         ctx2.commit();
         ctx2.close();

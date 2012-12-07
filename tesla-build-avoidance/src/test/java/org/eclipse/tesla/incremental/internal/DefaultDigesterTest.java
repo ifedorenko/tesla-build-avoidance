@@ -18,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
-import org.eclipse.tesla.incremental.Digester;
 import org.eclipse.tesla.incremental.internal.DefaultDigester;
 import org.junit.Test;
 

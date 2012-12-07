@@ -1,5 +1,5 @@
 /**
- * Public API for incremental build support, use {@link org.eclipse.tesla.incremental.BuildContextManager} as entry point.
+ * Public API for incremental build support, use {@link org.eclipse.tesla.incremental.BuildContext} as entry point.
  */
 
 package org.eclipse.tesla.incremental;

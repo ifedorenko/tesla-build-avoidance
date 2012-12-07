@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
-import org.eclipse.tesla.incremental.BuildContext;
 import org.eclipse.tesla.incremental.PathSet;
 
 class DefaultInputResolutionContext
@@ -30,7 +29,7 @@ class DefaultInputResolutionContext
 
     private final BuildState buildState;
 
-    public DefaultInputResolutionContext( BuildContext buildContext, PathSet pathSet, boolean fullBuild,
+    public DefaultInputResolutionContext( DefaultBuildContext buildContext, PathSet pathSet, boolean fullBuild,
                                           BuildState buildState )
     {
         this.outputDirectory = buildContext.getOutputDirectory();

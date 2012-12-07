@@ -1,4 +1,4 @@
-package org.eclipse.tesla.incremental;
+package org.eclipse.tesla.incremental.internal;
 
 /*******************************************************************************
  * Copyright (c) 2011 Sonatype, Inc.

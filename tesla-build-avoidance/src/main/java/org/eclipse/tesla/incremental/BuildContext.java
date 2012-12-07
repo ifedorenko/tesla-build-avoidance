@@ -16,7 +16,24 @@ import java.io.Serializable;
 import java.util.Collection;
 
 /**
- * Manages the updates of files within a particular output directory.
+ * Provides incremental build support for code generators and similar tooling that produces output from some input
+ * files. The general usage pattern is demonstrated by this simplified example snippet:
+ * 
+ * <pre>
+ * {@literal @}Inject
+ * BuildContext buildContext;
+ * 
+ * ...
+ * 
+ * PathSet pathSet = new PathSet( inputDir, includes, excludes );
+ * for ( String inputPath : buildContext.getInputs( pathSet ) )
+ * {
+ *     File inputFile = new File( inputDir, inputPath );
+ *     File outputFile = new File( outputDir, inputPath );
+ *     // actually produce output file
+ *     buildContext.addOutput( inputFile, outputFile );
+ * }
+ * </pre>
  */
 public interface BuildContext
     extends Closeable
@@ -35,22 +52,6 @@ public interface BuildContext
      * @see #addMessage(File, int, int, String, int, Throwable)
      */
     public static final int SEVERITY_ERROR = 2;
-
-    /**
-     * Creates a new digester to create a fingerprint of the current component/plugin configuration. The configuration
-     * fingerprint is used to detect a change in plugin configuration since the last build, allowing the plugin to do a
-     * full rebuild rather an incremental build.
-     * 
-     * @return The configuration digester, never {@code null}.
-     */
-    Digester newDigester();
-
-    /**
-     * Gets the output directory managed by this context.
-     * 
-     * @return The output directory being managed, never {@code null}.
-     */
-    File getOutputDirectory();
 
     /**
      * Gets the user value that has been associated with the specified key during the previous build. If a full build
@@ -83,25 +84,11 @@ public interface BuildContext
     void setValue( Serializable key, Serializable value );
 
     /**
-     * Records the fingerprint of the current configuration and checks whether the configuration has changed since the
-     * last build. Such a change in configuration usually means all input files need to be rebuild, regardless whether
-     * the files themselves are modified.
-     * 
-     * @param digest The fingerprint of the configuration, must not be {@code null}.
-     * @return {@code true} if the configuration has changed since the last build and a full rebuild should be done,
-     *         {@code false} if an incremental build is sufficient.
-     * @see #newDigester()
-     * @see #getInputs(PathSet)
-     */
-    boolean setConfiguration( byte[] digest );
-
-    /**
      * Determines all input files matched by the specified path set that require processing. An input file might require
      * processing because it was added or modified since the last build or because any of its previously produced
      * outputs is missing.
      * <p>
-     * If configuration change was determined during invocation of {@link #setConfiguration(byte[])}, all input files
-     * are considered to require processing.
+     * If configuration change was determined by the build system, all input files are considered to require processing.
      * 
      * @param paths The path set whose inputs should be analyzed for changes, must not be {@code null}.
      * @return The (possibly empty) collection of input paths that need processing to update the output directory. The
@@ -208,9 +195,11 @@ public interface BuildContext
      * buildContextManager.addMessage( input, ... );
      * </pre>
      * 
-     * When {@link #commit()} gets called and any messages of severity {@link #SEVERITY_ERROR} exist for files matching
-     * the path sets passed to {@link #getInputs(PathSet, boolean)}, either added during the current build or still
-     * uncleared from a previous build, a {@link BuildException} is thrown.
+     * Build is considered "failed" if any messages of severity {@link #SEVERITY_ERROR} exist for files matching the
+     * path sets passed to {@link #getInputs(PathSet, boolean)}, either added during the current build or still
+     * uncleared from a previous build. Failed builds are handled according to build execution environment. For example,
+     * during Maven build MojoExecutionException holding the error message(s) will be raised after mojo execution, or
+     * error markers on corresponding input files will be created inside Eclipse IDE.
      * 
      * @param input The input file to add a message for, must not be {@code null}.
      * @param line The one-based line number inside the file where the problem exists, may be non-positive if the line
@@ -233,26 +222,4 @@ public interface BuildContext
      */
     void clearMessages( File input );
 
-    /**
-     * Finishes changes associated with this build context. Among others, this deletes any orphaned output files of
-     * previous builds, persists the incremental build state back to disk and releases any resources associated with the
-     * context. Once a build context has been finished, it must not be used for further operations. Finishing any
-     * already finished build context has no effect.
-     * 
-     * @throws BuildException If the build added any error message or if any error message from previous builds were not
-     *             cleared.
-     * @see #addMessage(File, int, int, String, int, Throwable)
-     */
-    void commit()
-        throws BuildException;
-
-    /**
-     * Releases resources associated with this build context.
-     * <p/>
-     * If this method is invoked for a build context that has not been finished yet, incremental build state from
-     * previous build is discarded and full build will be performed during next execution.
-     * 
-     * @see #commit()
-     */
-    void close();
 }
