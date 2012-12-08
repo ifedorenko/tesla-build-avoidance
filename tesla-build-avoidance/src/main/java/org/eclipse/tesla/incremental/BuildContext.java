@@ -8,7 +8,6 @@ package org.eclipse.tesla.incremental;
  *   http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -36,7 +35,6 @@ import java.util.Collection;
  * </pre>
  */
 public interface BuildContext
-    extends Closeable
 {
 
     /**
