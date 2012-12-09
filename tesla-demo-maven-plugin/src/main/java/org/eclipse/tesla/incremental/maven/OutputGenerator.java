@@ -12,38 +12,40 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
-import org.eclipse.tesla.incremental.BuildContextManager;
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.eclipse.tesla.incremental.BuildContext;
 
 /**
  * A simple component that demonstrates the use of the incremental build support when the active build context is not
  * directly accessible due to API restrictions.
- * 
- * @plexus.component role="org.eclipse.tesla.incremental.maven.OutputGenerator"
  */
+@Named
 public class OutputGenerator
 {
+    private final BuildContext buildContext;
 
-    /**
-     * @plexus.requirement
-     */
-    private BuildContextManager buildContextManager;
+    @Inject
+    public OutputGenerator( BuildContext buildContext )
+    {
+        this.buildContext = buildContext;
+    }
 
     public void generate( File inputFile, File outputFile, Properties filterProps )
     {
         // register output files
-        buildContextManager.addOutput( inputFile, outputFile );
+        buildContext.addOutput( inputFile, outputFile );
 
         // generate output files
         try
         {
-            buildContextManager.clearMessages( inputFile );
-            IOUtils.filter( inputFile, buildContextManager.newOutputStream( outputFile ), "UTF-8", filterProps );
+            buildContext.clearMessages( inputFile );
+            IOUtils.filter( inputFile, buildContext.newOutputStream( outputFile ), "UTF-8", filterProps );
         }
         catch ( IOException e )
         {
-            buildContextManager.addMessage( inputFile, 0, 0, "Could not read file", BuildContextManager.SEVERITY_ERROR,
-                                            e );
+            buildContext.addMessage( inputFile, 0, 0, "Could not read file", BuildContext.SEVERITY_ERROR, e );
         }
     }
-
 }

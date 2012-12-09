@@ -29,10 +29,24 @@
 
   <properties>
     <surefire.redirectTestOutputToFile>true</surefire.redirectTestOutputToFile>
-    <maven.version>2.0.6</maven.version>
+    <maven.version>3.1-SNAPSHOT</maven.version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.eclipse.tesla</groupId>
+      <artifactId>tesla-build-avoidance-maven</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>${maven.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
@@ -41,9 +55,9 @@
     </dependency>
 
     <dependency>
-      <groupId>org.eclipse.tesla</groupId>
-      <artifactId>tesla-build-avoidance</artifactId>
-      <version>${project.version}</version>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>1</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -62,21 +76,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.plexus</groupId>
-        <artifactId>plexus-component-metadata</artifactId>
-        <version>1.5.5</version>
-        <executions>
-          <execution>
-            <id>generate-components-xml</id>
-            <goals>
-              <goal>generate-metadata</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
   </build>
 
   <profiles>
